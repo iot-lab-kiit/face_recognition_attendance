@@ -1,3 +1,8 @@
+## Contributing
+
+If you would like to contribute to this project, please read our [Contributing Guidelines](contributing.md).
+
+
 # Face-recognition-attendance-system
 The Face Recognition Attendance System is a Python-based project that utilizes face recognition techniques to automate the attendance process. It provides an efficient and convenient way of marking attendance by recognizing and verifying faces of individuals. 
 
