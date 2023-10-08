@@ -26,7 +26,7 @@ The Face Recognition Attendance System is a Python-based project that utilizes f
 
 ## Future Scope
 
--As this code is developed, new features will be added, The main one being authenticity in face recognition. This application will bw connected with an OxyMeter
+- As this code is developed, new features will be added, The main one being authenticity in face recognition. This application will bw connected with an OxyMeter
 made with IoT technology, which will authenticate the user being present in real time by reading their fingerprint and displaying their oxygen level.
 
 
