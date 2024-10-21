@@ -24,7 +24,11 @@ The Face Recognition Attendance System is a Python-based project that utilizes f
 - Install all the requirements, ```pip install -r requirements.txt```
 - Launch the application by running main.py: ```python main.py```
 - Use the provided user interface to perform various tasks such as enrolling new faces, updating the face database, and viewing attendance records.
-- 
+
+<p align="center">
+  <img src="https://github.com/user-attachments/assets/47b476fc-6244-4db8-a86c-919ad142fe25" />
+</p>  
+
 - For registering the face Enter the Name in Specified Block, then click on register button, then the camera will open and the user will be asked to look at the camera. The system will capture the face and save it in the database.
   
 - When the user clicks In button, the camera will open and the user will be asked to look at the camera. The system will recognize the user and mark the attendance of the user as IN.
