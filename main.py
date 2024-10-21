@@ -10,7 +10,7 @@ from deepface import DeepFace
 image_dir = os.path.join('images')
 log_dir = os.path.join('log')
 model_name = 'Facenet512'
-camera_index = 1
+camera_index = 0
 
 # Load face data
 face_data_path = os.path.join(log_dir, 'face_data.csv')
