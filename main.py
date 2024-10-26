@@ -1,163 +1,146 @@
-#image file size should be less than 150 kb and jpg format.
-
-import face_recognition
-import cv2
-import numpy as np
-import time
-import pandas as pd
-import os
 import tkinter as tk
-from datetime import datetime,timezone
-from multiprocessing import Process
-video_capture = cv2.VideoCapture(0)
-# data0=[]
-logging_file = open('log.txt',"a")
-global window
-global flag
-flag=0
-width = int(video_capture.get(cv2.CAP_PROP_FRAME_WIDTH)
-            )
-height = int(video_capture.get(cv2.CAP_PROP_FRAME_HEIGHT))
+from tkinter import messagebox
+import cv2
+import os
+import pandas as pd
+from datetime import datetime
+from deepface import DeepFace
 
-counter = 1  # initialize counter outside the function
+# Directories
+image_dir = os.path.join('images')
+log_dir = os.path.join('log')
+model_name = 'Facenet512'
+camera_index = 0
 
+# Load face data
+face_data_path = os.path.join(log_dir, 'face_data.csv')
+if not os.path.exists(face_data_path):
+    pd.DataFrame(columns=['Name', 'ImagePath']).to_csv(face_data_path, index=False)
 
-#mouse_click function takes 4 parameters 
-# 1. event: represents mouse event, leftclick, rightclick
-# 2. x,y : arguments represent x and y coordinates of mouse
-# 3. flag event is set to provide info about mouse event
-def mouse_click(event,x,y,flags,params):
-    global time_type, counter
-    time_type=""
-    if event == cv2.EVENT_LBUTTONDOWN:
-        if x<320:
-            time_type="in_time"
-        else:
-            time_type="out_time"
-        
-        if counter % 2 == 0:  # write to log file only on even clicks
-            # Process(target=insert_data,
-            #     args=(time_type, name, datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S"))).start()
-            logging_file.write(name + " " + time_type + " " + datetime.now().strftime("%Y-%m-%d %H:%M:%S") + '\n')
-        counter += 1  # increment the counter on every click
-        flag=1
-        window.destroy()
+face_data = pd.read_csv(face_data_path)
 
-folderPath = 'Images'
-known_face_encodings = []
-known_face_names = []
+# Attendance log function
+def log_attendance(name, status):
+    log_path = os.path.join(log_dir, 'attendance_log.csv')
+    if not os.path.exists(log_path):
+        log_df = pd.DataFrame(columns=['Name', 'Time', 'Status'])
+    else:
+        log_df = pd.read_csv(log_path)
 
-for file in os.listdir(folderPath):
-    # print("file = ", file)
-    # Load image and get face encoding
-    img_path = os.path.join(folderPath, file)
-    # print("img_path = ", img_path)
-    image = face_recognition.load_image_file(img_path)
-    # print("image = ", image)
-    # print("---------------------------\n",face_recognition.face_encodings(image))
-    face_encoding = face_recognition.face_encodings(image)[0]
-    
-    # Extract name from file name
-    name = file.split('.')[0]
-    
-    # Append face encoding and name to lists
-    known_face_encodings.append(face_encoding)
-    known_face_names.append(name)
-    
-    #----------------------------------------------------------
-    
-    #for taking images from iot api
-    
-    #api --> json --> rollno,photo --> jpg(csv)
-    #while loop
-    #image = face_recognition.load_image_file(img[rows])
-    #face_encoding = face_recognition.face_encodings(image)[0]
-    # roll = pd.roll[row]
-    #     known_face_encodings.append(face_encoding)
-    #     known_face_names.append(name)
-    
-    #-----------------------------------------------------------
-# Initialize some variables
-face_locations = []
-face_encodings = []
-face_names = []
-process_this_frame = True
-# names =set()
-# prev_time = time.time()
-# store_interval = 10
+    current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    new_entry = {'Name': name, 'Time': current_time, 'Status': status}
+    log_df = log_df._append(new_entry, ignore_index=True)
+    log_df.to_csv(log_path, index=False)
+    messagebox.showinfo("Attendance", f"{status} logged for {name} at {current_time}.")
 
-while True:
-    if(flag==1):
-        time.sleep(2)
-        flag=0
-    ret, frame = video_capture.read()
-    cv2.namedWindow('Video')
-    cv2.setMouseCallback('Video',mouse_click)
-    # Resize frame of video to 1/4 size for faster face recognition processing
-    small_frame = cv2.resize(frame, (0, 0), fx=0.25, fy=0.25)
-    rgb_small_frame = small_frame[:, :, ::-1]
-    # Only process every other frame of video to save time
-    if process_this_frame:
-        # Find all the faces and face encodings in the current frame of video
-        face_locations = face_recognition.face_locations(rgb_small_frame)
-        face_encodings = face_recognition.face_encodings(rgb_small_frame, face_locations)
-        face_names = []
-        for face_encoding in face_encodings:
-            matches = face_recognition.compare_faces(known_face_encodings, face_encoding,tolerance=0.5)
-            name = "Unknown or try again...."
-            face_distances = face_recognition.face_distance(known_face_encodings, face_encoding)
-            best_match_index = np.argmin(face_distances)
-            if matches[best_match_index]:
-                name = known_face_names[best_match_index]
-            face_names.append(name)
-            # prev=len(names)
-            # names.add(name)
-            # if len(names) > prev:
-            #     t = time.localtime()
-            #     current_time = time.strftime("%H:%M:%S", t)
-            #     data.append([name,current_time])
-            #     df = pd.DataFrame(data, columns=['Name', 'Time'])
-            #     df.to_excel('name_time.xlsx', index=False)
-            #     prev_time = time.time()    
-    process_this_frame = not process_this_frame
-    # Display the results
-    # cv2.namedWindow('Video')
-    # cv2.setMouseCallback('Video',mouse_click)
+# Face registration function
+def register_face():
+    name = entry_name.get()
+    if not name:
+        messagebox.showerror("Error", "Please enter a name.")
+        return
     
-    for (top, right, bottom, left), name in zip(face_locations, face_names):
-        # Scale back up face locations since the frame we detected in was scaled to 1/4 size
-        top *= 4
-        right *= 4
-        bottom *= 4
-        left *= 4
-        # Draw a box around the face
-        # cv2.rectangle(frame, (left, top), (right, bottom), (0, 0, 255), 2)
-        # Draw a label with a name below the face
-        cv2.rectangle(frame, (left, bottom - 35), (right, bottom), (0, 0, 255), cv2.FILLED)
-        font = cv2.FONT_HERSHEY_DUPLEX
-        frame=cv2.putText(frame, name, (left + 14, bottom - 6), font, 0.5, (255, 255, 255), 1)  
-        if counter % 2 == 0:
-            frame = cv2.putText(frame, "IN", (int(width / 4), 50), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 255), 5)
-            frame = cv2.putText(frame, "OUT", (int(3 * width / 4), 50), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 255), 5) 
-            frame = cv2.line(frame, (int(width / 2), 0), (int(width / 2), int(height)), (255, 255, 255), 2)
-        else:
-            frame = cv2.putText(frame,"FACE DETECTED", (int(width / 4), 440), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 255), 5)
-            frame = cv2.putText(frame, "CLICK TO CONTINUE", (int(width / 5), 50), cv2.FONT_HERSHEY_SIMPLEX, 1.3, (0, 255, 255), 5)
-        cv2.imshow('Video', frame)  
-    
-        window = tk.Tk()
-        window.withdraw()
-        window.geometry("6x6")  
-        window.mainloop() 
-        
+    cap = cv2.VideoCapture(camera_index)
+    if not cap.isOpened():
+        messagebox.showerror("Error", "Could not access the webcam.")
+        return
 
-    # Display the resulting image
-    cv2.imshow('Video', frame)   
-    # Hit 'q' on the keyboard to quit!
-    if cv2.waitKey(1) & 0xFF == ord('q'):
-        break
-# Release handle to the webcam
-video_capture.release()
-cv2.destroyAllWindows()
+    messagebox.showinfo("Info", "Press 's' to capture the image.")
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            messagebox.showerror("Error", "Failed to capture image.")
+            break
 
-logging_file.close()
+        # Reduce the resolution of the frame
+        frame = cv2.resize(frame, (640, 480))
+
+        cv2.imshow('Register Face', frame)
+        if cv2.waitKey(1) & 0xFF == ord('s'):
+            image_path = os.path.join(image_dir, f"{name}.jpg")
+            cv2.imwrite(image_path, frame)
+
+            # Update CSV
+            new_data = pd.DataFrame({'Name': [name], 'ImagePath': [image_path]})
+            face_data = pd.read_csv(face_data_path)
+            face_data = face_data._append(new_data, ignore_index=True)
+            face_data.to_csv(face_data_path, index=False)
+            
+            messagebox.showinfo("Success", f"Face for {name} registered successfully.")
+            break
+        elif cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+    cap.release()
+    cv2.destroyAllWindows()
+
+# Face recognition function
+def recognize_face(status):
+    cap = cv2.VideoCapture(camera_index)
+    if not cap.isOpened():
+        messagebox.showerror("Error", "Could not access the webcam.")
+        return
+
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            messagebox.showerror("Error", "Failed to capture image.")
+            break
+
+        # Reduce the resolution of the frame
+        frame = cv2.resize(frame, (640, 480))
+
+        img_path = 'temp.jpg'
+        cv2.imwrite(img_path, frame)
+
+        try:
+            detected_faces = DeepFace.extract_faces(img_path, detector_backend='opencv', enforce_detection=False)
+            if detected_faces:
+                for face in detected_faces:
+                    x, y, w, h = face['facial_area']['x'], face['facial_area']['y'], face['facial_area']['w'], face['facial_area']['h']
+                    cv2.rectangle(frame, (x, y), (x + w, y + h), (0, 255, 0), 2)
+                    
+                    for idx, row in face_data.iterrows():
+                        registered_img_path = row['ImagePath']
+                        result = DeepFace.verify(img1_path=img_path, img2_path=registered_img_path, model_name=model_name, enforce_detection=False)
+                        
+                        if result['verified']:
+                            name = row['Name']
+                            cv2.putText(frame, name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.9, (36, 255, 12), 2)
+                            log_attendance(name, status)
+                            break
+
+            cv2.imshow('Face Recognition', frame)
+            cv2.waitKey(5000)
+            cap.release()
+            cv2.destroyAllWindows()
+
+        except Exception as e:
+            messagebox.showerror("Error", f"An error occurred: {e}")
+            break
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            break
+
+# GUI Setup
+window = tk.Tk()
+window.title("Face Recognition Attendance System")
+window.geometry("400x200")
+
+# Name Entry for registration
+tk.Label(window, text="Enter Name (For Registeration Only):").pack(pady=10)
+entry_name = tk.Entry(window)
+entry_name.pack()
+
+# Register button
+register_button = tk.Button(window, text="Register", command=register_face)
+register_button.pack(pady=5)
+
+# In and Out buttons
+in_button = tk.Button(window, text="In", command=lambda: recognize_face("In"))
+in_button.pack(pady=5)
+
+out_button = tk.Button(window, text="Out", command=lambda: recognize_face("Out"))
+out_button.pack(pady=5)
+
+window.mainloop()
